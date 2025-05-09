@@ -1,0 +1,88 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: gradle
+  labels:
+    app.kubernetes.io/version: "0.4"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/displayName: Gradle
+    tekton.dev/categories: Build Tools
+    tekton.dev/tags: build-tool
+    tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le"
+spec:
+  description: >-
+    This Task can be used to run a Gradle build.
+
+  workspaces:
+    - name: source
+      description: The workspace consisting of the gradle project.
+    - name: gradle-config
+      description: The workspace consisting of the custom gradle properties provided by the user.
+      optional: true
+    - name: cache
+      description: The workspace consisting of the gradle cache.
+      optional: true
+  params:
+    - name: GRADLE_IMAGE
+      description: Gradle base image.
+      type: string
+      # default: docker-mirrors.alauda.cn/library/gradle:8.13-jdk17
+      default: docker-mirrors.alauda.cn/timbru31/java-node:17-jdk-20
+    - name: PROJECT_DIR
+      description: The directory containing build.gradle
+      type: string
+      default: "."
+    - name: TASKS
+      description: 'The gradle tasks to run (default: build)'
+      type: array
+      default:
+        - build
+    - name: EXTRA_ARGS
+      description: Extra arguments to add to the gradle jib build
+      default: ""
+  steps:
+    - name: gradle-tasks
+      image: $(params.GRADLE_IMAGE)
+      env:
+        - name: GRADLE_USER_HOME
+          value: "/home/gradle"
+      workingDir: $(workspaces.source.path)/$(params.PROJECT_DIR)
+      args:
+        - "$(params.TASKS)"
+      script: |
+        #!/usr/bin/env bash
+
+        if [[ "$(workspaces.gradle-config.bound)" == "true" ]]; then
+          echo "gradle-config workspace is bound"
+          if [[ -f $(workspaces.gradle-config.path)/gradle.properties ]]; then
+            echo "copying gradle.properties to /home/gradle"
+            cp "$(workspaces.gradle-config.path)/gradle.properties" /home/gradle
+          fi
+        fi
+
+        if [[ "$(workspaces.cache.bound)" == "true" ]]; then
+          echo "cache workspace is bound, use it as gradle cache"
+          export GRADLE_USER_HOME=$(workspaces.cache.path)
+          echo "GRADLE_USER_HOME is set to $(workspaces.cache.path)"
+        fi
+
+        if [[ -f gradlew ]]; then
+          cmd="./gradlew $* $(params.EXTRA_ARGS)"
+        else
+          cmd="gradle $* $(params.EXTRA_ARGS)"
+        fi
+
+        echo "Running gradle task with command below"
+        echo "$cmd"
+        eval "$cmd"
+      volumeMounts:
+        - mountPath: /home/gradle
+          name: empty-dir
+      securityContext:
+        privileged: true
+        runAsUser: 0
+        runAsGroup: 0
+  volumes:
+    - name: empty-dir
+      emptyDir: {}
