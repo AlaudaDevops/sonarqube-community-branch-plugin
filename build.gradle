@@ -23,6 +23,7 @@ plugins {
     id('info.solidsoft.pitest') version('1.15.0')
     id('com.github.johnrengelman.shadow') version('8.1.1')
     id('net.researchgate.release') version('3.0.2')
+    id('maven-publish')
 }
 
 group 'com.github.mc1arke.sonarqube.plugin'
@@ -64,8 +65,8 @@ dependencies {
     customTestRuntime('org.kohsuke:github-api-unbridged:1.326')
     compileOnly(fileTree(dir: sonarLibraries, include: '**/*.jar', exclude: 'extensions/*.jar'))
     testImplementation(fileTree(dir: sonarLibraries, include: '**/*.jar', exclude: 'extensions/*.jar'))
-    testImplementation('org.mockito:mockito-core:5.14.2')
-    testImplementation('org.assertj:assertj-core:3.26.3')
+    testImplementation('org.mockito:mockito-core:5.15.2')
+    testImplementation('org.assertj:assertj-core:3.27.3')
     testImplementation('org.wiremock:wiremock:3.10.0')
     zip("sonarqube:sonarqube:${sonarqubeVersion}@zip")
     runtimeOnly('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2')
@@ -153,5 +154,26 @@ test {
     useJUnitPlatform()
     testLogging {
         events "passed", "skipped", "failed"
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        // 配置发布到私有 Maven 仓库
+        maven {
+            name = 'privateRepo'
+            url = "https://build-nexus.alauda.cn/repository/alauda-maven/"
+            
+            // 配置认证信息
+            credentials {
+                username = project.findProperty("mavenUsername") ?: System.getenv("MAVEN_USERNAME")
+                password = project.findProperty("mavenPassword") ?: System.getenv("MAVEN_PASSWORD")
+            }
+        }
     }
 }

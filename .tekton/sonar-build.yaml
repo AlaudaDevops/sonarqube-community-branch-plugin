@@ -1,0 +1,61 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: branch-plugin-build
+  annotations:
+    pipelinesascode.tekton.dev/on-comment: "(/branch-plugin)"
+    pipelinesascode.tekton.dev/on-cel-expression: |-
+      (target_branch.matches("^(main|release-.*|alauda-.*)$") || event == "pull_request" )
+    pipelinesascode.tekton.dev/pipeline: "[.tekton/pipelines/pipeline-build.yaml]"
+    pipelinesascode.tekton.dev/task: "[.tekton/tasks/gradle.yaml]"
+    pipelinesascode.tekton.dev/max-keep-runs: "10"
+spec:
+  taskRunSpecs:
+  - pipelineTaskName: gradle-build
+    computeResources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+  timeouts:
+    pipeline: "1h"
+  pipelineRef:
+    name: branch-plugin-build
+  params:
+    - name: git-url
+      value: "{{ repo_url }}"
+    - name: git-revision
+      value: "{{ source_branch }}"
+    - name: git-commit
+      value: "{{ revision }}"
+    - name: extra-args
+      value: "--no-daemon -q --console=plain -x test"
+    - name: tasks
+      value:
+      - clean
+      - build
+      - publish
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 10Gi
+    - name: basic-auth
+      secret:
+        secretName: "{{ git_auth_secret }}"
+    - name: gitversion-config
+      configMap:
+        name: gitversion-config
+    - name: cache
+      persistentVolumeClaim:
+        claimName: gradle-cache
+  taskRunTemplate:
+    podTemplate:
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: "OnRootMismatch"
