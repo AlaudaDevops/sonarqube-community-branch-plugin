@@ -1,0 +1,85 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: branch-plugin-build
+spec:
+  params:
+  - name: git-url
+    description: Repository URL to clone from.
+    type: string
+  - name: git-revision
+    description: Revision to checkout. (branch, tag, sha, ref, etc...)
+    type: string
+  - name: git-commit
+    description: Commit sha used in this build
+    default: ""
+  - name: extra-args
+    description: Extra arguments to add to the gradle jib build
+    default: ""
+  - name: tasks
+    description: "The gradle tasks to run (default: build)"
+    type: array
+    default:
+      - build
+  workspaces:
+    - name: source
+      description: Workspace for shared code source
+    - name: basic-auth
+      optional: true
+      description: >
+        A Workspace containing a .gitconfig and .git-credentials file. These
+        will be copied to the user's home before any git commands are run. Any
+        other files in this Workspace are ignored. It is strongly recommended
+        to use ssh-directory over basic-auth whenever possible and to bind a
+        Secret to this Workspace over other volume types.
+    - name: gitversion-config
+      optional: true
+      description: >
+        A Workspace containing a gitversion-config file. This file is used to set the git version.
+    - name: cache
+      description: >
+        A Workspace containing a cache directory. This directory is used to cache the gradle build.
+  tasks:
+  - name: git-clone
+    timeout: 10m
+    retries: 0
+    taskRef:
+      resolver: hub
+      params:
+        - name: catalog
+          value: catalog
+        - name: kind
+          value: task
+        - name: name
+          value: git-clone
+        - name: version
+          value: "0.9"
+
+    params:
+      - name: url
+        value: $(params.git-url)
+      - name: revision
+        value: $(params.git-revision)
+
+    workspaces:
+      - name: output
+        workspace: source
+      - name: basic-auth
+        workspace: basic-auth
+
+  - name: gradle-build
+    params:
+    - name: EXTRA_ARGS
+      value: $(params.extra-args)
+    - name: TASKS
+      value: $(params.tasks[*])
+    runAfter:
+    - git-clone
+    taskRef:
+      kind: Task
+      name: gradle
+    workspaces:
+    - name: source
+      workspace: source
+    - name: cache
+      workspace: cache
