@@ -36,6 +36,11 @@ spec:
       optional: true
       description: >
         A Workspace containing a gitversion-config file. This file is used to set the git version.
+    - name: gradle-config
+      optional: true
+      description: >
+        A Workspace containing a gradle.properties file with Maven credentials (mavenUsername, mavenPassword).
+        Typically bound to a Secret.
     - name: cache
       description: >
         A Workspace containing a cache directory. This directory is used to cache the gradle build.
@@ -81,5 +86,7 @@ spec:
     workspaces:
     - name: source
       workspace: source
+    - name: gradle-config
+      workspace: gradle-config
     - name: cache
       workspace: cache

@@ -28,7 +28,7 @@ spec:
     - name: git-commit
       value: "{{ revision }}"
     - name: extra-args
-      value: "--no-daemon -q --console=plain -x test"
+      value: "--no-daemon -q --console=plain clean -x test"
     - name: tasks
       value:
       - clean
@@ -49,6 +49,9 @@ spec:
     - name: gitversion-config
       configMap:
         name: gitversion-config
+    - name: gradle-config
+      secret:
+        secretName: maven-credentials
     - name: cache
       persistentVolumeClaim:
         claimName: gradle-cache

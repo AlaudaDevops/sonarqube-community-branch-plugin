@@ -1,0 +1,55 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "baseBranches": [
+    "alauda-2026.1.0"
+  ],
+  "enabledManagers": [
+    "dockerfile",
+    "gradle",
+    "gradle-wrapper"
+  ],
+  "timezone": "Asia/Shanghai",
+  "labels": [
+    "dependencies"
+  ],
+  "rangeStrategy": "bump",
+  "dependencyDashboard": true,
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 2,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 4am on monday"
+    ]
+  },
+  "packageRules": [
+    {
+      "matchManagers": [
+        "gradle",
+        "gradle-wrapper"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "minor",
+        "patch",
+        "pin"
+      ],
+      "groupName": "gradle non-major dependencies"
+    },
+    {
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "minor",
+        "patch",
+        "pin"
+      ],
+      "groupName": "docker base images"
+    }
+  ]
+}
