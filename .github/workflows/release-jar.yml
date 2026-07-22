@@ -1,0 +1,32 @@
+name: Release plugin jar
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        required: false
+        default: v26.1.0
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build shadowJar
+        run: ./gradlew shadowJar --no-daemon --stacktrace
+      - name: List artifacts
+        run: ls -l build/libs/
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: build/libs/sonarqube-community-branch-plugin-*.jar
+          fail_on_unmatched_files: true
